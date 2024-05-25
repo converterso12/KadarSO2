@@ -1,91 +1,86 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perhitungan Kadar SO2</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 </head>
 <body>
     <div class="container">
         <h1>Perhitungan Kadar SO2</h1>
-        <form id="constants-form">
-            <label for="C">Nilai C:</label>
-            <input type="number" id="C" value="0.10282" step="any">
-            <label for="V">Nilai V (ml):</label>
-            <input type="number" id="V" value="10" step="any">
-            <label for="Pt">Nilai Pt:</label>
-            <input type="number" id="Pt" value="0.855" step="any">
+        <form id="constantsForm">
+            <label for="c">Nilai C:</label>
+            <input type="number" id="c" value="0.10282">
+            <label for="v">Nilai V (ml):</label>
+            <input type="number" id="v" value="10">
+            <label for="pt">Nilai Pt:</label>
+            <input type="number" id="pt" value="0.855">
             <button type="button" onclick="saveConstants()">Simpan Konstanta</button>
         </form>
-        <form id="calculation-form">
-            <label for="time">Waktu:</label>
+        <form id="calculationForm">
+            <label for="time">Waktu Pengujian:</label>
             <input type="datetime-local" id="time">
-            <label for="V1">Nilai V1 (ml):</label>
-            <input type="number" id="V1" step="any">
+            <label for="v1">Nilai V1:</label>
+            <input type="number" id="v1">
             <button type="button" onclick="calculateSO2()">Hitung</button>
         </form>
-        <div id="result">
-            <h2>Hasil: <span id="so2-result"></span>%</h2>
-        </div>
-        <button onclick="viewResults()">Lihat Hasil</button>
+        <div id="result"></div>
+        <button onclick="location.href='results.html'">Lihat Hasil</button>
     </div>
+    
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-database.js";
 
-    <script>
+        // Your web app's Firebase configuration
         const firebaseConfig = {
-  apiKey: "AIzaSyDwcwcIdTSPUadytFCh8RqBM8zCVtXEo-I",
-  authDomain: "dataso2-id.firebaseapp.com",
-  databaseURL: "https://dataso2-id-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "dataso2-id",
-  storageBucket: "dataso2-id.appspot.com",
-  messagingSenderId: "1084913028872",
-  appId: "1:1084913028872:web:d3588f12dcbeed0cec26bd"
-};
+            apiKey: "AIzaSyDwcwcIdTSPUadytFCh8RqBM8zCVtXEo-I",
+            authDomain: "dataso2-id.firebaseapp.com",
+            databaseURL: "https://dataso2-id-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "dataso2-id",
+            storageBucket: "dataso2-id.appspot.com",
+            messagingSenderId: "1084913028872",
+            appId: "1:1084913028872:web:d3588f12dcbeed0cec26bd"
+        };
 
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const database = getDatabase(app);
 
-        let C = 0.10282;
-        let V = 10;
-        let Pt = 0.855;
+        let constants = {
+            c: 0.10282,
+            v: 10,
+            pt: 0.855
+        };
 
         function saveConstants() {
-            C = parseFloat(document.getElementById('C').value);
-            V = parseFloat(document.getElementById('V').value);
-            Pt = parseFloat(document.getElementById('Pt').value);
-            alert('Konstanta disimpan!');
+            constants.c = parseFloat(document.getElementById('c').value);
+            constants.v = parseFloat(document.getElementById('v').value);
+            constants.pt = parseFloat(document.getElementById('pt').value);
+            alert('Konstanta berhasil disimpan');
         }
 
         function calculateSO2() {
             const time = document.getElementById('time').value;
-            const V1 = parseFloat(document.getElementById('V1').value);
+            const v1 = parseFloat(document.getElementById('v1').value);
 
-            if (!time || isNaN(V1)) {
-                alert('Harap isi semua field.');
-                return;
+            if (time && v1) {
+                const so2 = constants.c * constants.v * constants.pt * v1;
+
+                const newEntry = push(ref(database, 'so2-data'));
+                set(newEntry, {
+                    time: time,
+                    v1: v1,
+                    pt: constants.pt,
+                    so2: so2
+                });
+
+                document.getElementById('result').innerHTML = `Hasil Kadar SO2: ${so2.toFixed(2)}`;
+            } else {
+                alert('Harap isi semua data');
             }
-
-            const so2 = (C * V * 10945) / (Pt * V1 + (C * V * 10945)) * 100;
-
-            document.getElementById('so2-result').textContent = so2.toFixed(2);
-
-            db.ref('results').push({
-                time: time,
-                V1: V1,
-                Pt: Pt,
-                so2: so2,
-                date: new Date().toLocaleDateString()
-            }).then(() => {
-                alert('Hasil perhitungan disimpan!');
-            }).catch(error => {
-                console.error('Error adding document: ', error);
-            });
-        }
-
-        function viewResults() {
-            window.location.href = 'results.html';
         }
     </script>
 </body>

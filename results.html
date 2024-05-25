@@ -1,92 +1,86 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hasil Perhitungan Kadar SO2</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 </head>
 <body>
     <div class="container">
         <h1>Hasil Perhitungan Kadar SO2</h1>
-        <div id="results-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Waktu</th>
-                        <th>V1 (ml)</th>
-                        <th>Pt</th>
-                        <th>Kadar SO2 (%)</th>
-                        <th>Hapus</th>
-                    </tr>
-                </thead>
-                <tbody id="results-body"></tbody>
-            </table>
-        </div>
-        <button onclick="deleteAll()">Hapus Semua Data</button>
-        <button onclick="goBack()">Kembali ke Perhitungan</button>
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Waktu</th>
+                    <th>V1</th>
+                    <th>Pt</th>
+                    <th>Kadar SO2</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data akan diisi di sini -->
+            </tbody>
+        </table>
+        <button onclick="deleteAllData()">Hapus Semua Data</button>
+        <button onclick="location.href='index.html'">Kembali ke Perhitungan</button>
     </div>
+    
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js";
+        import { getDatabase, ref, remove, onValue } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-database.js";
 
-    <script>
+        // Your web app's Firebase configuration
         const firebaseConfig = {
-  apiKey: "AIzaSyDwcwcIdTSPUadytFCh8RqBM8zCVtXEo-I",
-  authDomain: "dataso2-id.firebaseapp.com",
-  databaseURL: "https://dataso2-id-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "dataso2-id",
-  storageBucket: "dataso2-id.appspot.com",
-  messagingSenderId: "1084913028872",
-  appId: "1:1084913028872:web:d3588f12dcbeed0cec26bd"
-};
+            apiKey: "AIzaSyDwcwcIdTSPUadytFCh8RqBM8zCVtXEo-I",
+            authDomain: "dataso2-id.firebaseapp.com",
+            databaseURL: "https://dataso2-id-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "dataso2-id",
+            storageBucket: "dataso2-id.appspot.com",
+            messagingSenderId: "1084913028872",
+            appId: "1:1084913028872:web:d3588f12dcbeed0cec26bd"
+        };
 
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const database = getDatabase(app);
 
-        function loadResults() {
-            db.ref('results').orderByChild('time').on('value', (snapshot) => {
-                const resultsBody = document.getElementById('results-body');
-                resultsBody.innerHTML = '';
-                let index = 1;
+        function loadData() {
+            const tableBody = document.querySelector('#resultsTable tbody');
+            const dataRef = ref(database, 'so2-data');
+
+            onValue(dataRef, (snapshot) => {
+                tableBody.innerHTML = '';
+                let count = 0;
                 snapshot.forEach((childSnapshot) => {
                     const data = childSnapshot.val();
-                    const row = `<tr>
-                                    <td>${index++}</td>
-                                    <td>${data.time}</td>
-                                    <td>${data.V1}</td>
-                                    <td>${data.Pt}</td>
-                                    <td>${data.so2.toFixed(2)}</td>
-                                    <td><button onclick="deleteResult('${childSnapshot.key}')">Hapus</button></td>
-                                </tr>`;
-                    resultsBody.insertAdjacentHTML('beforeend', row);
+                    const row = tableBody.insertRow();
+                    row.insertCell(0).innerText = ++count;
+                    row.insertCell(1).innerText = data.time;
+                    row.insertCell(2).innerText = data.v1;
+                    row.insertCell(3).innerText = data.pt;
+                    row.insertCell(4).innerText = data.so2.toFixed(2);
+                    const deleteCell = row.insertCell(5);
+                    const deleteButton = document.createElement('button');
+                    deleteButton.innerText = 'Hapus';
+                    deleteButton.onclick = () => deleteData(childSnapshot.key);
+                    deleteCell.appendChild(deleteButton);
                 });
             });
         }
 
-        function deleteResult(id) {
-            db.ref('results/' + id).remove().then(() => {
-                alert('Data berhasil dihapus!');
-                loadResults();
-            }).catch((error) => {
-                console.error('Error removing document: ', error);
-            });
+        function deleteData(key) {
+            remove(ref(database, `so2-data/${key}`));
         }
 
-        function deleteAll() {
-            db.ref('results').remove().then(() => {
-                alert('Semua data berhasil dihapus!');
-                loadResults();
-            }).catch((error) => {
-                console.error('Error removing documents: ', error);
-            });
+        function deleteAllData() {
+            remove(ref(database, 'so2-data'));
         }
 
-        function goBack() {
-            window.location.href = 'index.html';
-        }
-
-        document.addEventListener('DOMContentLoaded', loadResults);
+        window.onload = loadData;
     </script>
 </body>
 </html>
