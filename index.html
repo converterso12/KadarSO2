@@ -30,11 +30,9 @@
     </div>
     
     <script type="module">
-        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js";
         import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-database.js";
 
-        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDwcwcIdTSPUadytFCh8RqBM8zCVtXEo-I",
             authDomain: "dataso2-id.firebaseapp.com",
@@ -45,28 +43,27 @@
             appId: "1:1084913028872:web:d3588f12dcbeed0cec26bd"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        let constants = {
+        window.constants = {
             c: 0.10282,
             v: 10,
             pt: 0.855
         };
 
-        function saveConstants() {
+        window.saveConstants = function() {
             constants.c = parseFloat(document.getElementById('c').value);
             constants.v = parseFloat(document.getElementById('v').value);
             constants.pt = parseFloat(document.getElementById('pt').value);
             alert('Konstanta berhasil disimpan');
         }
 
-        function calculateSO2() {
+        window.calculateSO2 = function() {
             const time = document.getElementById('time').value;
             const v1 = parseFloat(document.getElementById('v1').value);
 
-            if (time && v1) {
+            if (time && !isNaN(v1)) {
                 const so2 = constants.c * constants.v * constants.pt * v1;
 
                 const newEntry = push(ref(database, 'so2-data'));
@@ -75,11 +72,16 @@
                     v1: v1,
                     pt: constants.pt,
                     so2: so2
+                })
+                .then(() => {
+                    document.getElementById('result').innerHTML = `Hasil Kadar SO2: ${so2.toFixed(2)}`;
+                })
+                .catch((error) => {
+                    console.error("Error writing to database: ", error);
+                    alert("Terjadi kesalahan saat menyimpan data.");
                 });
-
-                document.getElementById('result').innerHTML = `Hasil Kadar SO2: ${so2.toFixed(2)}`;
             } else {
-                alert('Harap isi semua data');
+                alert('Harap isi semua data dengan benar');
             }
         }
     </script>
