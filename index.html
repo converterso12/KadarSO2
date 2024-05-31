@@ -167,7 +167,7 @@
           });
 
           // Load template Excel
-          fetch('/mnt/data/Format Excel.xlsx')
+          fetch('path/to/Format Excel.xlsx')
             .then(response => response.arrayBuffer())
             .then(arrayBuffer => {
               const workbook = XLSX.read(arrayBuffer, { type: 'array' });
