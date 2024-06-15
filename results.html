@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hasil Absensi</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style1.css">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Hasil Absensi</h1>
+    </header>
+
+    <div class="form-container">
+        <label for="filter-month">Bulan:</label>
+        <input type="month" id="filter-month">
+
+        <label for="filter-name">Nama:</label>
+        <select id="filter-name">
+            <!-- Options for names will be populated dynamically -->
+        </select>
+
+        <button id="filter-button">Tampilkan Data</button>
+        <button id="export-button">Ekspor ke Excel</button>
+        <button id="delete-button">Hapus Data Terpilih</button>
+        
+    </div>
+
+    <div id="tables-container"></div>
+
+    <div class="button-container">
+        <button onclick="location.href='index.html'">Kembali ke Input Absen</button>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2024 Absensi</p>
+</footer>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import * as XLSX from 'https://cdn.sheetjs.com/xlsx-0.18.5/package/xlsx.mjs';
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyAZKgYwVwNZFaxipe3VYVcYM4SLYkAums0",
+  authDomain: "ujicobaso2.firebaseapp.com",
+  databaseURL: "https://ujicobaso2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ujicobaso2",
+  storageBucket: "ujicobaso2.appspot.com",
+  messagingSenderId: "1019407105989",
+  appId: "1:1019407105989:web:f8a0a1a7f591d76d0ad5ac"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const tablesContainer = document.getElementById('tables-container');
+    const filterButton = document.getElementById('filter-button');
+    const exportButton = document.getElementById('export-button');
+    const deleteButton = document.getElementById('delete-button');
+    const filterMonthInput = document.getElementById('filter-month');
+    const filterNameSelect = document.getElementById('filter-name');
+    const selectAllCheckbox = document.getElementById('select-all');
+
+    const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
+
+    const loadAttendanceData = (month, year, nameFilter = '') => {
+        onValue(ref(db, 'attendance/'), (snapshot) => {
+            tablesContainer.innerHTML = '';
+            const daysInMonth = getDaysInMonth(month, year);
+            const dataByDate = {};
+
+            snapshot.forEach((childSnapshot) => {
+                const data = childSnapshot.val();
+                const dateObj = new Date(data.date);
+                const dataMonth = dateObj.getMonth();
+                const dataYear = dateObj.getFullYear();
+                const dataName = data.name;
+
+                if (dataMonth === month && dataYear === year && (nameFilter === '' || dataName === nameFilter)) {
+                    const day = dateObj.getDate();
+                    dataByDate[day] = { ...data, key: childSnapshot.key };
+                }
+            });
+
+            const monthYear = new Date(year, month).toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+            const monthTable = document.createElement('div');
+            monthTable.classList.add('table-container');
+            monthTable.innerHTML = `
+                <h2>Daftar Absen ${monthYear}</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>
+            <input type="checkbox" id="select-all"> Pilih Semua
+        </th>
+                            <th>No</th>
+                            <th>Tanggal</th>
+                            <th>Nomor ID</th>
+                            <th>Nama</th>
+                            <th>Attendance</th>
+                            <th>Working (Start)</th>
+                            <th>Working (Finish)</th>
+                            <th>Total Overtime</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Array.from({ length: daysInMonth }, (_, index) => {
+                            const day = index + 1;
+                            const data = dataByDate[day] || {};
+                            const dateObj = new Date(year, month, day);
+                            const options = { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' };
+                            const formattedDate = dateObj.toLocaleDateString('id-ID', options);
+
+                            let attendance = '';
+                            let startHour = '';
+                            let finishHour = '';
+                            let totalOvertime = '';
+                            let remarks = '';
+
+                            if (data.work) {
+                                if (['Hadir', 'siang', 'malam'].includes(data.work)) {
+                                    if (data.work === 'siang') {
+                                        attendance = '1';
+                                        startHour = '5';
+                                        finishHour = '17';
+                                        remarks = 'Day Shift';
+                                    } else if (data.work === 'malam') {
+                                        attendance = '2';
+                                        startHour = '17';
+                                        finishHour = '5';
+                                        remarks = 'Night Shift';
+                                    }
+                                    const workHours = 11;
+                                    const overtime = workHours - 8;
+                                    const dayOfWeek = dateObj.getDay();
+                                    const isWeekendOrHoliday = dayOfWeek === 0 || dayOfWeek === 6;
+                                    totalOvertime = isWeekendOrHoliday ? workHours : overtime;
+                                } else {
+                                    attendance = data.work;
+                                }
+                            }
+
+                            return `
+                                <tr>
+                                    <td><input type="checkbox" class="select-row" data-key="${data.key || ''}"></td>
+                                    <td>${day}</td>
+                                    <td>${formattedDate}</td>
+                                    <td>${data.id || ''}</td>
+                                    <td>${data.name || ''}</td>
+                                    <td>${attendance}</td>
+                                    <td>${startHour}</td>
+                                    <td>${finishHour}</td>
+                                    <td>${totalOvertime}</td>
+                                    <td>${remarks}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            tablesContainer.appendChild(monthTable);
+            
+            const selectAllCheckbox = document.getElementById('select-all');
+
+            // Event listener for select-all checkbox
+            selectAllCheckbox.addEventListener('change', () => {
+                const checkboxes = document.querySelectorAll('.select-row');
+                checkboxes.forEach(checkbox => checkbox.checked = selectAllCheckbox.checked);
+            });
+        });
+    };
+
+    const exportToExcel = (month, year) => {
+        onValue(ref(db, 'attendance/'), (snapshot) => {
+            const workbook = XLSX.utils.book_new();
+            const daysInMonth = getDaysInMonth(month, year);
+            const dataByName = {};
+
+            snapshot.forEach((childSnapshot) => {
+                const data = childSnapshot.val();
+                const dateObj = new Date(data.date);
+                const dataMonth = dateObj.getMonth();
+                const dataYear = dateObj.getFullYear();
+                const dataName = data.name;
+
+                if (dataMonth === month && dataYear === year) {
+                    if (!dataByName[dataName]) {
+                        dataByName[dataName] = [];
+                    }
+                    dataByName[dataName].push(data);
+                }
+            });
+
+            for (const name in dataByName) {
+                const data = Array.from({ length: daysInMonth }, (_, index) => {
+                    const day = index + 1;
+                    const dateObj = new Date(year, month, day);
+                    const options = { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' };
+                    const formattedDate = dateObj.toLocaleDateString('id-ID', options);
+                    const entry = dataByName[name].find(d => new Date(d.date).getDate() === day) || {};
+
+                    let attendance = '';
+                    let startHour = '';
+                    let finishHour = '';
+                    let totalOvertime = '';
+                    let remarks = '';
+
+                    if (entry.work) {
+                        if (['Hadir', 'siang', 'malam'].includes(entry.work)) {
+                            if (entry.work === 'siang') {
+                                attendance = '1';
+                                startHour = '5';
+                                finishHour = '17';
+                                remarks = 'Day Shift';
+                            } else if (entry.work === 'malam') {
+                                attendance = '2';
+                                startHour = '17';
+                                finishHour = '5';
+                                remarks = 'Night Shift';
+                            }
+                            const workHours = 11;
+                            const overtime = workHours - 8;
+                            const dayOfWeek = dateObj.getDay();
+                            const isWeekendOrHoliday = dayOfWeek === 0 || dayOfWeek === 6;
+                            totalOvertime = isWeekendOrHoliday ? workHours : overtime;
+                        } else {
+                            attendance = entry.work;
+                        }
+                    }
+
+                    return {
+                        No:day,
+                        Tanggal: formattedDate,
+                        'Nomor ID': entry.id || '',
+                        Nama: entry.name || name,
+                        Attendance: attendance,
+                        'Working (Start)': startHour,
+                        'Working (Finish)': finishHour,
+                        'Total Overtime': totalOvertime,
+                        Remarks: remarks
+                    };
+                });
+
+                const worksheet = XLSX.utils.json_to_sheet(data);
+                const wscols = [
+                    { wch: 5 },  // No
+                    { wch: 20 }, // Tanggal
+                    { wch: 15 }, // Nomor ID
+                    { wch: 15 }, // Nama
+                    { wch: 10 }, // Attendance
+                    { wch: 20 }, // Working Hour (Start)
+                    { wch: 20 }, // Working Hour (Finish)
+                    { wch: 20 }, // Total Overtime
+                    { wch: 10 }  // Remarks
+                ];
+                worksheet['!cols'] = wscols;
+                XLSX.utils.book_append_sheet(workbook, worksheet, name);
+            }
+
+            XLSX.writeFile(workbook, `Absensi_${year}_${String(month + 1).padStart(2, '0')}.xlsx`);
+        });
+    };
+
+    const deleteSelectedData = () => {
+        const selectedKeys = [];
+        const checkboxes = document.querySelectorAll('.select-row:checked');
+        checkboxes.forEach(checkbox => {
+            const key = checkbox.getAttribute('data-key');
+            if (key) {
+                selectedKeys.push(key);
+            }
+        });
+
+        if (selectedKeys.length === 0) {
+            alert('Pilih data yang akan dihapus.');
+            return;
+        }
+
+        const verificationCode = prompt('Masukkan kode verifikasi:');
+        if (verificationCode !== '11') {
+            alert('Kode verifikasi salah.');
+            return;
+        }
+
+        selectedKeys.forEach(key => {
+            remove(ref(db, `attendance/${key}`));
+        });
+
+        alert('Data terpilih berhasil dihapus.');
+    };
+
+    // Load current month data on page load
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    filterMonthInput.value = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
+    // Populate the names dropdown and set default to the last one
+    onValue(ref(db, 'attendance/'), (snapshot) => {
+        const namesSet = new Set();
+        let lastName = '';
+        snapshot.forEach((childSnapshot) => {
+            const data = childSnapshot.val();
+            namesSet.add(data.name);
+            lastName = data.name; // Set lastName to the name of the last entry
+        });
+
+        const namesArray = Array.from(namesSet);
+        const sortedNames = namesArray.sort((a, b) => a.localeCompare(b));
+        filterNameSelect.innerHTML = sortedNames.map(name => `<option value="${name}">${name}</option>`).join('');
+
+        // Set the default value to the last name and load data for that name
+        filterNameSelect.value = lastName;
+        loadAttendanceData(currentMonth, currentYear, lastName);
+    });
+
+    filterButton.addEventListener('click', () => {
+        const selectedDate = new Date(filterMonthInput.value);
+        const selectedMonth = selectedDate.getMonth();
+        const selectedYear = selectedDate.getFullYear();
+        const selectedName = filterNameSelect.value;
+        loadAttendanceData(selectedMonth, selectedYear, selectedName);
+    });
+
+    exportButton.addEventListener('click', () => {
+        const selectedDate = new Date(filterMonthInput.value);
+        const selectedMonth = selectedDate.getMonth();
+        const selectedYear = selectedDate.getFullYear();
+        exportToExcel(selectedMonth, selectedYear);
+    });
+
+    deleteButton.addEventListener('click', deleteSelectedData);
+</script>
+</body>
+</html>

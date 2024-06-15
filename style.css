@@ -1,0 +1,90 @@
+      body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 98%;
+            margin: auto;
+            overflow: hidden;
+            max-width: 1200px;
+        }
+        header {
+            background: #35424a;
+            color: #ffffff;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: #e8491d 3px solid;
+        }
+        header h1 {
+            text-align: center;
+            margin: 0;
+            text-transform: uppercase;
+            font-size: 24px;
+        }
+        .table-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-gap: 10px;
+            margin-top: 20px;
+            background: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+        .table-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table-container th, .table-container td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+        }
+        .table-container th {
+            background: #35424a;
+            color: #ffffff;
+        }
+        .table-container th:first-child, .table-container td:first-child {
+            border-left: none;
+        }
+        .table-container th:last-child, .table-container td:last-child {
+            border-right: none;
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+            /* Column widths */
+        .col-date { width: 10%; }
+        .col-id { width: 50%; }
+        .col-name { width: 20%; }
+        .col-attendance { width: 10%; }
+        .col-start { width: 15%; }
+        .col-finish { width: 15%; }
+        .col-overtime { width: 10%; }
+        .col-remarks { width: 15%; }
+        }
+        button {
+            background: #35424a;
+            color: #ffffff;
+            border: 0;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #e8491d;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #35424a;
+            color: white;
+            margin-top: 20px;
+        }
+        @media (max-width: 768px) {
+            .table-container {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+        }
