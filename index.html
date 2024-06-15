@@ -52,21 +52,21 @@
     import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyAZKgYwVwNZFaxipe3VYVcYM4SLYkAums0",
-  authDomain: "ujicobaso2.firebaseapp.com",
-  databaseURL: "https://ujicobaso2-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "ujicobaso2",
-  storageBucket: "ujicobaso2.appspot.com",
-  messagingSenderId: "1019407105989",
-  appId: "1:1019407105989:web:f8a0a1a7f591d76d0ad5ac"
-};
+        apiKey: "AIzaSyAZKgYwVwNZFaxipe3VYVcYM4SLYkAums0",
+        authDomain: "ujicobaso2.firebaseapp.com",
+        databaseURL: "https://ujicobaso2-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "ujicobaso2",
+        storageBucket: "ujicobaso2.appspot.com",
+        messagingSenderId: "1019407105989",
+        appId: "1:1019407105989:web:f8a0a1a7f591d76d0ad5ac"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    
-     const allowedLocation = {
-        latitude: -2.8559667,  // Latitude dari tautan yang diberikan
-        longitude: 122.1763768 // Longitude dari tautan yang diberikan
+
+    const allowedLocation = {
+        latitude: -2.8559667,
+        longitude: 122.1763768
     };
 
     const attendanceForm = document.getElementById('attendanceForm');
@@ -95,7 +95,7 @@
                 console.log(`Allowed Location: ${allowedLocation.latitude}, ${allowedLocation.longitude}`);
                 console.log(`Distance: ${distance} meters`);
 
-                if ((work === 'siang' || work === 'malam') && distance > 200) { // Contoh: batas jarak 100 meter
+                if ((work === 'siang' || work === 'malam') && distance > 200) {
                     popupMessage.textContent = 'Anda tidak berada di lokasi Acid Plant.';
                     setTimeout(() => {
                         popup.classList.remove('active');
@@ -103,8 +103,23 @@
                 } else {
                     submitAttendance({ date, name, id, work });
                 }
-            }, () => {
-                popupMessage.textContent = 'Tidak dapat memperoleh lokasi Anda.';
+            }, (error) => {
+                let errorMessage = 'Tidak dapat memperoleh lokasi Anda.';
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Pengguna menolak permintaan geolokasi.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Informasi lokasi tidak tersedia.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Permintaan lokasi melampaui batas waktu.';
+                        break;
+                    case error.UNKNOWN_ERROR:
+                        errorMessage = 'Terjadi kesalahan yang tidak diketahui.';
+                        break;
+                }
+                popupMessage.textContent = errorMessage;
                 setTimeout(() => {
                     popup.classList.remove('active');
                 }, 3000);
@@ -135,14 +150,14 @@
 
     function getDistance(location1, location2) {
         const R = 6371e3; // metres
-        const φ1 = location1.latitude * Math.PI/180; // φ, λ in radians
+        const φ1 = location1.latitude * Math.PI/180;
         const φ2 = location2.latitude * Math.PI/180;
         const Δφ = (location2.latitude - location1.latitude) * Math.PI/180;
         const Δλ = (location2.longitude - location1.longitude) * Math.PI/180;
 
         const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ/2) * Math.sin(Δλ/2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
         const distance = R * c; // in metres
